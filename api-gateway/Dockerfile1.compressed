@@ -1,6 +1,6 @@
 FROM eclipse-temurin:17.0.4.1_1-jdk as jre-build
 
-RUN apk add --no-cache binutils
+#RUN apk add --no-cache binutils
 
 COPY target/api-gateway-1.0-SNAPSHOT.jar /app/app.jar
 WORKDIR /app
