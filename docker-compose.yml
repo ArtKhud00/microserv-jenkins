@@ -1,0 +1,152 @@
+---
+version: '3.7'
+services:
+  ## PostgreSQL Docker Compose Config
+  postgres-order:
+    container_name: postgres-order
+    image: postgres:15
+    environment:
+      POSTGRES_DB: order-service
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      PGDATA: /data/postgres
+    volumes:
+      - ./postgres-order:/data/postgres
+    expose:
+      - "5731"
+    ports:
+      - "5731:5731"
+    command: -p 5731
+    restart: always
+
+  postgres-inventory:
+    container_name: postgres-inventory
+    image: postgres:15
+    environment:
+      POSTGRES_DB: inventory-service
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      PGDATA: /data/postgres
+    volumes:
+      - ./postgres-inventory:/data/postgres
+    expose:
+      - "5732"
+    ports:
+      - "5732:5732"
+    command: -p 5732
+    restart: always
+
+  postgres-product:
+    container_name: postgres-product
+    image: postgres:15
+    environment:
+      POSTGRES_DB: storehousedb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      PGDATA: /data/postgres
+    volumes:
+      - ./postgres-product:/data/postgres
+    expose:
+      - "5734"
+    ports:
+      - "5734:5734"
+    command: -p 5734
+    restart: always
+
+  ## Zipkin
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+
+  ## Eureka Server
+  discovery-server:
+    image: artkhud20/discovery-server:2.0.0
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - zipkin
+
+  api-gateway:
+    image: artkhud20/api-gateway:2.0.0
+    container_name: api-gateway
+    ports:
+      - "8181:8080"
+    expose:
+      - "8181"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY= TRACE
+    depends_on:
+      - zipkin
+      - discovery-server
+
+  ## Product-Service Docker Compose Config
+  product-service:
+    container_name: product-service
+    image: artkhud20/product-service:2.0.0
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-product:5734/storehousedb
+    depends_on:
+      - postgres-product
+      - discovery-server
+      - api-gateway
+
+  ## Order-Service Docker Compose Config
+  order-service:
+    container_name: order-service
+    image: artkhud20/order-service:2.0.1
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-order:5731/order-service
+    depends_on:
+      - postgres-order
+      - zipkin
+      - discovery-server
+      - api-gateway
+
+  ## Inventory-Service Docker Compose Config
+  inventory-service:
+    container_name: inventory-service
+    image: artkhud20/inventory-service:2.0.1
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-inventory:5732/inventory-service
+    depends_on:
+      - postgres-inventory
+      - discovery-server
+      - api-gateway
+
+  ## Prometheus
+  prometheus:
+    image: prom/prometheus:v2.37.1
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - product-service
+      - inventory-service
+      - order-service
+
+  ## Grafana
+  grafana:
+    image: grafana/grafana-oss:8.5.2
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    links:
+      - prometheus:prometheus
+    volumes:
+      - ./grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: order-service
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  strategy: {}
+  template:
+    metadata:
+
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-service
+          image: artkhud20/order-service:2.0.1
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-order:5731/order-service
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: eureka.instance.preferIpAddress
+              value: "true"
+      restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: order-service
+  name: order-service
+spec:
+  ports:
+    - name: "80"
+      port: 80
+      targetPort: 8080
+  selector:
+    app: order-service
+status:
+  loadBalancer: {}

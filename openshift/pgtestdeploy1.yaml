@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels:
+    app: postgres-product
+  name: postgres-product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-product
+  template: 
+    metadata:
+      labels:
+        app: postgres-product
+    spec:
+      containers: 
+      - name: postgres-product
+        image: docker.io/artkhud20/nonpriv-postgres:1.0.0
+        args:
+        - "-p"
+        - "5734"
+        env:
+        - name: POSTGRES_DB
+          value: storehousedb
+        - name: POSTGRES_PASSWORD
+          value: password
+        - name: POSTGRES_USER
+          value: user
+        - name: PGDATA
+          value: /temp/data
+        ports:
+          - containerPort: 5734
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres-product
+  name: postgres-product
+spec:
+  ports:
+    - name: "5734"
+      port: 5734
+      targetPort: 5734
+  selector:
+    app: postgres-product
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels:
+    app: postgres-order
+  name: postgres-order
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-order
+  template: 
+    metadata:
+      labels:
+        app: postgres-order
+    spec:
+      containers: 
+      - name: postgres-order
+        image: docker.io/artkhud20/nonpriv-postgres:1.0.0
+        args:
+        - "-p"
+        - "5731"
+        env:
+        - name: POSTGRES_DB
+          value: order-service
+        - name: POSTGRES_PASSWORD
+          value: password
+        - name: POSTGRES_USER
+          value: user
+        - name: PGDATA
+          value: /temp/data
+        ports:
+          - containerPort: 5731
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres-order
+  name: postgres-order
+spec:
+  ports:
+    - name: "5731"
+      port: 5731
+      targetPort: 5731
+  selector:
+    app: postgres-order
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels:
+    app: postgres-inventar
+  name: postgres-inventar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-inventar
+  template: 
+    metadata:
+      labels:
+        app: postgres-inventar
+    spec:
+      containers: 
+      - name: postgres-inventar
+        image: docker.io/artkhud20/nonpriv-postgres:1.0.0
+        args:
+        - "-p"
+        - "5732"
+        env:
+        - name: POSTGRES_DB
+          value: inventory-service
+        - name: POSTGRES_PASSWORD
+          value: password
+        - name: POSTGRES_USER
+          value: user
+        - name: PGDATA
+          value: /temp/data
+        ports:
+          - containerPort: 5732
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres-inventar
+  name: postgres-inventar
+spec:
+  ports:
+    - name: "5732"
+      port: 5732
+      targetPort: 5732
+  selector:
+    app: postgres-inventar
+status:  

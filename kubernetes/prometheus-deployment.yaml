@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval:     10s
+      evaluation_interval: 10s
+
+    scrape_configs:
+      - job_name: 'product_service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['product-service:80']
+            labels:
+              application: 'Product Service Application'
+      - job_name: 'order_service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['order-service:80']
+            labels:
+              application: 'Order Service Application'
+      - job_name: 'inventory_service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['inventory-service:80']
+            labels:
+              application: 'Inventory Service Application'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: prometheus
+  name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - image: prom/prometheus:v2.37.1
+          name: prometheus
+#          args:
+#            - '--config.file=/etc/prometheus.yml'
+          ports:
+            - containerPort: 9090
+          resources: {}
+          volumeMounts:
+#            - mountPath: /etc/prometheus/prometheus.yml
+            - mountPath: /etc/prometheus/
+              name: prometheus-config-volume
+      restartPolicy: Always
+      volumes:
+        - name: prometheus-claim0
+          persistentVolumeClaim:
+            claimName: prometheus-claim0
+        - name: prometheus-config-volume
+          configMap:
+            defaultMode: 420
+            name: prometheus-config
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: prometheus
+  name: prometheus
+spec:
+  ports:
+    - name: "9090"
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: prometheus
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-claim0
+  name: prometheus-claim0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
